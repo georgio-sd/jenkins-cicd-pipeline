@@ -1,0 +1,75 @@
+sed -i 's/lightning_install --enable-static \&\& make/lightning_install --enable-static --enable-developer \&\& make/' Dockerfile
+sed -i "s/FROM debian:stretch-slim as downloader/FROM debian:stretch-slim as downloader\nLABEL autodelete=$BUILD_ID/" Dockerfile
+sed -i "s/FROM debian:stretch-slim as builder/FROM debian:stretch-slim as builder\nLABEL autodelete=$BUILD_ID/" Dockerfile
+docker build -t clightning:$BUILD_ID .
+docker image tag clightning:$BUILD_ID 112904279782.dkr.ecr.us-west-1.amazonaws.com/clightning:$BUILD_ID
+docker push 112904****.dkr.ecr.us-west-1.amazonaws.com/clightning:$BUILD_ID
+docker rmi 112904****.dkr.ecr.us-west-1.amazonaws.com/clightning:$BUILD_ID
+docker rmi clightning:$BUILD_ID
+docker rmi $(docker images -q -f "dangling=true" -f "label=autodelete=$BUILD_ID")
+cat > clightning.yaml <<EOF
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: node-0
+spec:
+  storageClassName: linstor
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200M
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clightning-node
+spec:
+  selector:
+    matchLabels:
+      app: clightning
+      tier: dev
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 0%
+      maxUnavailable: 100%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: clightning
+        tier: dev
+    spec:
+      containers:
+      - name: lightningd
+        image: 112904****.dkr.ecr.us-west-1.amazonaws.com/clightning:$BUILD_ID
+        command:
+        - /usr/bin/tini
+        - -g
+        - --
+        - ./entrypoint.sh
+        - --network=bitcoin
+        - --bitcoin-cli=/usr/bin/bitcoin-cli
+        - --bitcoin-rpcuser=***
+        - --bitcoin-rpcpassword=***
+        - --bitcoin-rpcconnect=***
+        - --bitcoin-rpcport=8332
+        - --log-level=info
+        - --log-file=lightning.log
+        - --alias=***
+        - --rgb=00ff00
+        - --addr=0.0.0.0:10000
+        volumeMounts:
+        - name: data
+          mountPath: "/root/.lightning"
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh","-c","/usr/local/bin/lightning-cli stop"]
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: node-0
+EOF
+kubectl apply -f clightning.yaml
