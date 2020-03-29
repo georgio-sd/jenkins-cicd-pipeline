@@ -1,2 +1,2 @@
-# jenkins-cicd-pipeline
-Jenkins pipline (GitHub->Jenkins->Docker repo->Kubernetes)
+# Jenkins CI/CD Pipeline
+From source code to Kubernetes cluster
