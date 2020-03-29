@@ -1,4 +1,4 @@
-# Jenkins CI/CD Pipeline
+# Jenkins CI/CD Pipeline (Kubernetes Deployment)
 ![VPC-Image](https://github.com/georgio-sd/jenkins-cicd-pipeline/raw/master/pipeline.jpg)
 
 Authentication:
