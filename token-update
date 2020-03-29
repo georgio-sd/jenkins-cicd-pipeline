@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+# 
+# /etc/cronetab
+# 0 */11 * * * root /usr/local/ecr-docker-token/token-update
+#
+$(aws ecr get-login --no-include-email --region us-west-1)
+yes | cp /root/.docker/config.json /var/lib/jenkins/.docker/
+chown jenkins:jenkins /var/lib/jenkins/.docker/config.json
